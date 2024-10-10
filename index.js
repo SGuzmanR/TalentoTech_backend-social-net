@@ -1,6 +1,6 @@
 // Importar dependencias (Configurar en package.json)
 import express from "express";
-import dotenv from "dotenv";
+import cors from 'cors';
 import connection from "./database/connection.js";
 import bodyParser from "body-parser";
 
@@ -16,7 +16,7 @@ connection();
 
 // Crear el servidor Node
 const app = express();
-const puerto = process.env.PORT || 3900;
+const port = process.env.PORT || 3900;
 
 // Configurar CORS para que acepte peticiones del Front-end
 app.use(cors({
@@ -36,8 +36,8 @@ app.use('/api/publication', PublicationRoutes);
 app.use('/api/follow', FollowRoutes);
 
 // Configurar el servidor de Node
-app.listen(puerto, () => {
-  console.log("Servidor de Node ejecutandose en el puerto", puerto);
+app.listen(port, () => {
+  console.log("Servidor de Node ejecutandose en el puerto", port);
 });
 
 export default app;
