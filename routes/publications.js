@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { testPublication } from "../controllers/publication.js"
 
 const router = Router();
 

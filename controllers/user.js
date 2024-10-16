@@ -1,4 +1,4 @@
-import User from '../models/users'
+import User from '../models/users.js'
 
 // Metodo de prueba del controlador user
 export const testUser = (req, res) => {
