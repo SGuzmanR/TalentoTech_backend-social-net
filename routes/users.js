@@ -5,6 +5,6 @@ const router = Router();
 
 // Definir rutas de User
 router.get('/test-user', testUser);
-router.get('/register', register);
+router.post('/register', register);
 
 export default router;

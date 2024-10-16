@@ -34,11 +34,12 @@ export const register = async (req, res) => {
     // Devolver el usuario registrado
     return res.status(200).json({
       message: "Registro de usuario exitoso",
-      params
+      params,
+      user_to_save
     });
 
   } catch (error) {
-    console.log("", error);
+    console.log("Error en el registro de usuario: ", error);
     return res.status(500).send({
       status: "error",
       message: "Error en el Registro de usuarios"
