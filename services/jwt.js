@@ -1,7 +1,11 @@
 import jwt from 'jwt-simple';
 import moment from 'moment';
+import dotenv from 'dotenv';
 
-const secret = 'SECRET_KEY_pRoJeCt_sOcIaL_net.@';
+// Cargar variables de entorno desde el archivo .env
+dotenv.config();
+
+const secret = process.env.SECRET_KEY;
 
 // Metodo para generar tokens
 // Unix: segundos transcurridos desde el 1 enero de 1970 hasta hoy
