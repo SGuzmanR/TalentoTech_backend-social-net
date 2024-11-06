@@ -132,3 +132,86 @@ export const login = async (req, res) => {
     });
   }
 };
+
+// Metodo para mostrar el perfil de un usuario
+export const profile = async (req, res) => {
+  try {
+    // Obtener el ID del usuario desde los parametros de la URL
+    const userId = req.params.id;
+    // Verificar si el ID del usuario autenticado esta disponible
+    if (!req.user || !req.user.userId) {
+      return res.status(500).send({
+        status: "success",
+        message: "Usuario no autenticado"
+      });
+    };
+
+    // Buscar el usuario en la BD y excluimos los datos que no queremos mostrar
+    const userProfile = await User.findById(userId).select('-password -role -email -__v');
+    // Verificar si el usuario buscado no existe
+    if (!userProfile) {
+      return res.status(404).send({
+        status: "success",
+        message: "Usuario no encontrado"
+      });
+    };
+
+    // Devolver la informacion del perfil del usuario solicitado
+    return res.status(200).send({
+      status: "success",
+      user: userProfile,
+
+    });
+
+  } catch (error) {
+    console.log('Error al obtener el perfil del usuario: ', error);
+    return res.status(500).send({
+      status: "error",
+      message: "Error al obtener el perfil del usuario"
+    });
+  }
+};
+
+// Metodo para listar los usuarios
+export const listUsers = async (req, res) => {
+  try {
+    // Gestionar la paginacion
+    // 1. Controlar la pagina actual
+    let page = req.params.page ? parseInt(req.params.page, 10) : 1;
+    // 2. Configurar los items por pagina a mostrar
+    let itemsPerPage = req.query.limit ? parseInt(req.params.page, 10) : 4;
+
+    // Realizar consulta paginada
+    const options = {
+      page: page,
+      limit: itemsPerPage,
+      select: '-password -email -role -__v'
+    };
+
+    const users = await User.paginate({}, options);
+
+    // Si no existen usuarios en la BD disponibles
+    if (!users || users.docs.length === 0) {
+      return res.status(404).send({
+        status: "error",
+        message: "No existen usuarios disponibles"
+      });
+    };
+
+    // Devolver los usuarios paginados
+    return res.status(200).send({
+      status: "success",
+      users: users.docs,
+      totalDocs: users.totalDocs,
+      totalPages: users.totalPages,
+      CurrentPage: users.page
+    });
+
+  } catch (error) {
+    console.log("Error al listar los usuarios: ", error);
+    return res.status(500).send({
+      status: "error",
+      message: "Error al listar los usuarios"
+    })
+  }
+};
