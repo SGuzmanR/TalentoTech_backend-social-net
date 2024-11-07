@@ -215,3 +215,75 @@ export const listUsers = async (req, res) => {
     })
   }
 };
+
+// Metodo para actualizar los datos del usuario
+export const updateUser = async (req, res) => {
+  try {
+    // Obtener la informacion del usuario a actualizar
+    let userIdentity = req.user; // El usuario autenticado en el token, lo trae desde el middleware auth.js
+    let userToUpdate = req.body; // Recoge los datos nuevos del usuario desde el formulario
+
+    // Eliminar campos que sobran porque no los vamos a actualizar
+    delete userToUpdate.iat;
+    delete userToUpdate.exp;
+    delete userToUpdate.role;
+
+    // Comprobamos si el usuario ya existe en la BD
+    const users = await User.find({
+      $or: [
+        { email: userToUpdate.email },
+        { nick: userToUpdate.nick }
+      ]
+    }).exec();
+
+    // Verificar si el usuario esta duplicado para evitar conflictos
+    const isDuplicateUser = users.some(user => {
+      return user && user._id.toString() !== userIdentity.userId;
+    });
+
+    if (isDuplicateUser) {
+      return res.status(400).send({
+        status: "error",
+        message: "Error, solo se puede actualizar los datos del usuario logueado"
+      });
+    };
+    
+    // Cifrar la contraseña en caso que la envien
+    if (userToUpdate.password) {
+      try {
+        let pwd = await bcrypt.hash(userToUpdate.password, 10);
+        userToUpdate.password = pwd;
+      } catch (error) {
+        res.status(500).send({
+          status: "error",
+          message: "Error al cifrar la contraseña"
+        });
+      };
+    } else {
+        delete userToUpdate.password;
+    };
+
+    // Buscar y actualizar el usuario en Mongo
+    let userUpdated = await User.findByIdAndUpdate(userIdentity.userId, userToUpdate, { new: true });
+
+    if (!userUpdated) {
+        return res.status(400).send({
+          status: "error",
+          message: "Error al actualizar el usuario"
+        });
+    };
+
+    // Devolver la respuesta existosa
+    return res.status(200).send({
+      status: "success",
+      message: "Usuario actualizado correctamente",
+      user: userUpdated
+    });
+  } catch (error) {
+    console.log("Error al actualizar los datos de los usuario: ", error);
+    return res.status().send({
+      status: "error",
+      message: "Error al actualizar los datos de los usuario"
+    });
+  }
+};
