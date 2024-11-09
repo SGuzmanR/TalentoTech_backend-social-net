@@ -287,3 +287,78 @@ export const updateUser = async (req, res) => {
     });
   }
 };
+
+// Metodo para subir AVATAR (Imagen de perfil) y actualizamos el campo image del User
+export const uploadAvatar = async (req, res) => {
+  try {
+    // Verificar si se ha subido un archivo
+    if (!req.file) {
+      return res.status(400).send({
+        status: "error",
+        message: "Error, la peticion no incluye la imagen"
+      });
+    };
+
+    // Obtener la URL del archivo subido en Cloudinary
+    const avatarUrl = req.file.path;
+
+    // Guardar la imagen en la BD
+    const userUpdated = await User.findByIdAndUpdate(
+      req.user.userId,
+      { image: avatarUrl },
+      { new: true }
+    );
+
+    // Verificar si la actualizacion fue exitosa
+    if (!userUpdated) {
+      return res.status(500).send({
+        status: "error",
+        message: "Error al subir el archivo del avatar"
+      });
+    };
+
+    // Devolver respuesta exitosa
+    return res.status(200).send({
+      status: "success",
+      user: userUpdated,
+      file: avatarUrl
+    });
+  } catch (error) {
+    console.log("Error al subir el archivo del avatar", error);
+    res.status(500).send({
+      status: "error",
+      message: "Error al subir el archivo del avatar"
+    });
+  }
+};
+
+// Metodo para mostrar el AVATAR (Imagen de perfil)
+export const avatar = async (req, res) => {
+  try {
+    // Obtener el parametro del archivo desde la URL
+    const userId = req.params.id.trim();
+
+    // Buscar usuario en la BD para obtener la URL de Cloudinary
+    const user = await User.findById(userId).select('image');
+
+    // Verificacion si el usuario existe y tiene una imagen
+    if (!user || !user.image) {
+      return res.status(404).send({
+        status: "error",
+        message: "No existe usuario o imagen"
+      });
+    };
+
+    // Devolver la URL de la imagen desde Cloudinary
+    return res.status(200).send({
+      status: "success",
+      imageUrl: user.image // URL de Cloudinary
+    });
+  } catch (error) {
+    console.log("Error al mostrar el archivo del avatar", error);
+    return res.status(500).send({
+      status: "error",
+      message: "Error al mostrar el archivo del avatar"
+    });
+  };
+};
