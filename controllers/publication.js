@@ -1,12 +1,6 @@
 import Publication from '../models/publications.js';
 import { followUserIds } from '../services/followServices.js';
 
-export const testPublication = (req, res) => {
-  return res.status(200).send({
-    message: "Mensaje enviado desde el controlador de Publication"
-  });
-};
-
 // Metodo para hacer (guardar en la BD) una publicacion
 export const savePublication = async (req, res) => {
   try {

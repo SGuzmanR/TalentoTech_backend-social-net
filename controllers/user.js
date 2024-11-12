@@ -1,25 +1,21 @@
-import User from '../models/users.js';
 import bcrypt from 'bcrypt';
+import User from '../models/users.js';
+import Follow from '../models/follows.js';
+import Publication from '../models/publications.js';
 import { createToken } from '../services/jwt.js';
+import { followThisUser, followUserIds } from '../services/followServices.js';
 
-// Metodo de prueba del controlador user
-export const testUser = (req, res) => {
-  return res.status(200).send({
-    message: "Mensaje enviado desde el controlador de Usuarios"
-  });
-};
-
-// Metodos Registro de Usuarios
+// Metodo Registro de Usuarios
 export const register = async (req, res) => {
   try {
-    // Obtener los datos de la peticion
+    // Obtener los datos de la petición
     let params = req.body;
 
-    // Validar los datos obtenidos
-    if (!params.name || !params.last_name || !params.nick || !params.email || !params.password) {
+    // Validar los datos obtenidos (que los datos obligatorios existan)
+    if(!params.name || !params.last_name || !params.nick || !params.email || !params.password) {
       return res.status(400).json({
         status: "error",
-        message: "Faltan datos por enviar",
+        message: "Faltan datos por enviar"
       });
     };
 
@@ -31,25 +27,25 @@ export const register = async (req, res) => {
       $or: [
         { email: user_to_save.email.toLowerCase() },
         { nick: user_to_save.nick.toLowerCase() }
-      ],
+      ]
     });
 
-    //Validar el existingUser
+    // Validar el existingUser
     if (existingUser) {
-      return res.status(200).send({
-        status: "success",
-        message: "El usuario ya existe"
+      return res.status(409).send({
+        status: "error",
+        message: "¡El usuario ya existe en la BD!"
       });
-    }
+    };
 
     // Cifrar la contraseña
     // Genera los saltos para encriptar
     const salt = await bcrypt.genSalt(10);
 
-    // Encriptar la contraseña y guardarla en la constante
+    // Encriptar la contraseña y guardarla en hashedPassword
     const hashedPassword = await bcrypt.hash(user_to_save.password, salt);
 
-    // Asignar la contraseña encriptada al objeto del usuario
+    // Asignar la contraseña encriptada al objeto del usauario
     user_to_save.password = hashedPassword;
 
     // Guardar el usuario en la base de datos
@@ -61,86 +57,89 @@ export const register = async (req, res) => {
       message: "Registro de usuario exitoso",
       user_to_save
     });
-
   } catch (error) {
     console.log("Error en el registro de usuario: ", error);
+    // Devolver mensaje de error
     return res.status(500).send({
       status: "error",
-      message: "Error en el Registro de usuarios"
+      message: "Error en el registro de usuario"
     });
   };
 };
 
-// Metodo de Login (user JWT)
+
+// Metodo de Login (usar JWT)
 export const login = async (req, res) => {
   try {
-    // Obtener los parametros del body enviados en la peticion
+    // Obtener los parámetros del body (enviados en la petición)
     let params = req.body;
 
-    // Validar que si recibimos el email y password
+    // Validar que si recibimos el email y el password
     if (!params.email || !params.password) {
       return res.status(400).send({
         status: "error",
-        message: "Faltan datos para autenticar el usuario"
+        message: "Faltan datos por enviar"
       });
     };
 
-    // Buscar en la DB si existe el email registrado
-    const userDB = await User.findOne({ email: params.email.toLowerCase() });
+    // Buscar en la BD si existe el email registrado
+    const userBD = await User.findOne({ email: params.email.toLowerCase() });
 
     // Si no existe el usuario buscado
-    if (!userDB) {
+    if (!userBD) {
       return res.status(404).send({
         status: "error",
-        message: "Usuario no encontrado",
-      })
-    };
+        message: "Usuario no encontrado"
+      });
+    }
 
     // Comprobar su contraseña
-    const validPassword = await bcrypt.compare(params.password, userDB.password);
+    const validPassword = await bcrypt.compare(params.password, userBD.password);
 
-    // Si la contraseña es incorrecta
+    // Si la contraseña es incorrecta (false)
     if (!validPassword) {
       return res.status(401).send({
         status: "error",
         message: "Contraseña incorrecta"
       });
-    };
+    }
 
-    // Generar token de autenticacion (JWT)
-    const token = createToken(userDB);
+    // Generar token de autenticación (JWT)
+    const token = createToken(userBD);
 
     // Devolver respuesta de login exitoso
     return res.status(200).json({
       status: "success",
-      message: "Autenticacion exitosa",
+      message: "Autenticación exitosa",
       token,
-      userDB: {
-        id: userDB._id,
-        name: userDB.name,
-        last_name: userDB.last_name,
-        email: userDB.email,
-        nick: userDB.nick,
-        image: userDB.image,
+      userBD: {
+        id: userBD._id,
+        name: userBD.name,
+        last_name: userBD.last_name,
+        email: userBD.email,
+        nick: userBD.nick,
+        image: userBD.image
       }
     });
   } catch (error) {
-    console.log("Error en la autenticacion del usuario: ", error);
+    console.log("Error en la autenticación del usuario: ", error);
+    // Devolver mensaje de error
     return res.status(500).send({
       status: "error",
-      message: "Error en la autenticacion del usuario"
+      message: "Error en la autenticación del usuario"
     });
-  }
+  };
 };
 
 // Metodo para mostrar el perfil de un usuario
 export const profile = async (req, res) => {
   try {
-    // Obtener el ID del usuario desde los parametros de la URL
+    // Obtener el ID del usuario desde los párametros de la URL
     const userId = req.params.id;
-    // Verificar si el ID del usuario autenticado esta disponible
-    if (!req.user || !req.user.userId) {
-      return res.status(500).send({
+
+    // Verificar si el ID del usuario autenticado está disponible
+    if(!req.user || !req.user.userId){
+      return res.status(401).send({
         status: "success",
         message: "Usuario no autenticado"
       });
@@ -148,38 +147,42 @@ export const profile = async (req, res) => {
 
     // Buscar el usuario en la BD y excluimos los datos que no queremos mostrar
     const userProfile = await User.findById(userId).select('-password -role -email -__v');
+
     // Verificar si el usuario buscado no existe
-    if (!userProfile) {
+    if(!userProfile){
       return res.status(404).send({
         status: "success",
         message: "Usuario no encontrado"
       });
-    };
+    }
 
-    // Devolver la informacion del perfil del usuario solicitado
-    return res.status(200).send({
+    // Información de seguimiento: id del usuario identificado (req.user.userId) y el id del usuario del perfil que queremos consultar (userId = req.params.id)
+    const followInfo = await followThisUser(req.user.userId, userId);
+
+    // Devolver la información del perfil del usuario solicitado
+    return res.status(200).json({
       status: "success",
       user: userProfile,
-
+      followInfo
     });
-
   } catch (error) {
-    console.log('Error al obtener el perfil del usuario: ', error);
+    console.log("Error al obtener el perfil del usuario: ", error);
     return res.status(500).send({
       status: "error",
       message: "Error al obtener el perfil del usuario"
     });
-  }
+  };
 };
 
-// Metodo para listar los usuarios
+// Metodo para Listar los usuarios
 export const listUsers = async (req, res) => {
   try {
-    // Gestionar la paginacion
-    // 1. Controlar la pagina actual
+    // Gestionar la paginación
+    // 1. Controlar la página actual
     let page = req.params.page ? parseInt(req.params.page, 10) : 1;
-    // 2. Configurar los items por pagina a mostrar
-    let itemsPerPage = req.query.limit ? parseInt(req.params.page, 10) : 4;
+
+    // 2. Configurar los ítems por página a mostrar
+    let itemsPerPage = req.query.limit ? parseInt(req.query.limit, 10) : 4;
 
     // Realizar consulta paginada
     const options = {
@@ -191,37 +194,41 @@ export const listUsers = async (req, res) => {
     const users = await User.paginate({}, options);
 
     // Si no existen usuarios en la BD disponibles
-    if (!users || users.docs.length === 0) {
+    if(!users || users.docs.length === 0){
       return res.status(404).send({
         status: "error",
         message: "No existen usuarios disponibles"
       });
-    };
+    }
+
+    // Listar los seguidores de un usuario, obtener el array de IDs de los usuarios que sigo
+    let followUsers = await followUserIds(req);
 
     // Devolver los usuarios paginados
-    return res.status(200).send({
+    return res.status(200).json({
       status: "success",
       users: users.docs,
       totalDocs: users.totalDocs,
       totalPages: users.totalPages,
-      CurrentPage: users.page
+      CurrentPage: users.page,
+      users_following: followUsers.following,
+      user_follow_me: followUsers.followers
     });
-
   } catch (error) {
     console.log("Error al listar los usuarios: ", error);
     return res.status(500).send({
       status: "error",
       message: "Error al listar los usuarios"
-    })
-  }
+    });
+  };
 };
 
 // Metodo para actualizar los datos del usuario
 export const updateUser = async (req, res) => {
   try {
-    // Obtener la informacion del usuario a actualizar
-    let userIdentity = req.user; // El usuario autenticado en el token, lo trae desde el middleware auth.js
-    let userToUpdate = req.body; // Recoge los datos nuevos del usuario desde el formulario
+    // Obtener la información del usuario a actualizar
+    let userIdentity = req.user;  // el usuario autenticado en el token, lo trae desde el middleware auth.js
+    let userToUpdate = req.body;  // recoge los datos nuevos del usuario desde el formulario
 
     // Eliminar campos que sobran porque no los vamos a actualizar
     delete userToUpdate.iat;
@@ -236,68 +243,68 @@ export const updateUser = async (req, res) => {
       ]
     }).exec();
 
-    // Verificar si el usuario esta duplicado para evitar conflictos
+    // Verificar si el usuario está duplicado para evitar conflictos
     const isDuplicateUser = users.some(user => {
       return user && user._id.toString() !== userIdentity.userId;
     });
 
-    if (isDuplicateUser) {
+    if(isDuplicateUser) {
       return res.status(400).send({
         status: "error",
         message: "Error, solo se puede actualizar los datos del usuario logueado"
       });
     };
-    
-    // Cifrar la contraseña en caso que la envien
-    if (userToUpdate.password) {
+
+    // Cifrar la contraseña en caso que la envíen en la petición
+    if(userToUpdate.password){
       try {
         let pwd = await bcrypt.hash(userToUpdate.password, 10);
         userToUpdate.password = pwd;
-      } catch (error) {
-        res.status(500).send({
+      } catch (hashError) {
+        return res.status(500).send({
           status: "error",
           message: "Error al cifrar la contraseña"
         });
       };
     } else {
-        delete userToUpdate.password;
+      delete userToUpdate.password;
     };
 
     // Buscar y actualizar el usuario en Mongo
-    let userUpdated = await User.findByIdAndUpdate(userIdentity.userId, userToUpdate, { new: true });
+    let userUpdated = await User.findByIdAndUpdate(userIdentity.userId, userToUpdate, { new: true});
 
-    if (!userUpdated) {
-        return res.status(400).send({
-          status: "error",
-          message: "Error al actualizar el usuario"
-        });
+    if(!userUpdated){
+      return res.status(400).send({
+        status: "error",
+        message: "Error al actualizar el usuario"
+      });
     };
 
-    // Devolver la respuesta existosa
-    return res.status(200).send({
+    // Devolver la respuesta exitosa
+    return res.status(200).json({
       status: "success",
       message: "Usuario actualizado correctamente",
       user: userUpdated
     });
   } catch (error) {
-    console.log("Error al actualizar los datos de los usuario: ", error);
-    return res.status().send({
+    console.log("Error al actualizar los datos del usuario: ", error);
+    return res.status(500).send({
       status: "error",
-      message: "Error al actualizar los datos de los usuario"
+      message: "Error al actualizar los datos del usuario"
     });
-  }
+  };
 };
 
-// Metodo para subir AVATAR (Imagen de perfil) y actualizamos el campo image del User
+// Metodo para subir AVATAR (imagen de perfil) y actualizamos el campo image del User
 export const uploadAvatar = async (req, res) => {
   try {
     // Verificar si se ha subido un archivo
-    if (!req.file) {
+    if(!req.file){
       return res.status(400).send({
         status: "error",
-        message: "Error, la peticion no incluye la imagen"
+        message: "Error la petición no incluye la imagen"
       });
-    };
+    }
 
     // Obtener la URL del archivo subido en Cloudinary
     const avatarUrl = req.file.path;
@@ -309,53 +316,103 @@ export const uploadAvatar = async (req, res) => {
       { new: true }
     );
 
-    // Verificar si la actualizacion fue exitosa
-    if (!userUpdated) {
+    // Verificar si la actualización fue exitosa
+    if(!userUpdated){
       return res.status(500).send({
         status: "error",
         message: "Error al subir el archivo del avatar"
       });
-    };
+    }
 
     // Devolver respuesta exitosa
-    return res.status(200).send({
+    return res.status(200).json({
       status: "success",
       user: userUpdated,
       file: avatarUrl
     });
   } catch (error) {
     console.log("Error al subir el archivo del avatar", error);
-    res.status(500).send({
+    return res.status(500).send({
       status: "error",
       message: "Error al subir el archivo del avatar"
     });
-  }
+  };
 };
 
-// Metodo para mostrar el AVATAR (Imagen de perfil)
+// Metodo para mostrar el AVATAR (imagen de perfil)
 export const avatar = async (req, res) => {
   try {
-    // Obtener el parametro del archivo desde la URL
-    const userId = req.params.id.trim();
+    // Obtener el ID desde el parámetro del archivo 
+    const userId = req.params.id;
 
-    // Buscar usuario en la BD para obtener la URL de Cloudinary
+    // Buscar el usuario en la base de datos para obtener la URL de Cloudinary
     const user = await User.findById(userId).select('image');
 
-    // Verificacion si el usuario existe y tiene una imagen
-    if (!user || !user.image) {
+    // Verificar si el usuario existe y tiene una imagen
+    if(!user || !user.image){
       return res.status(404).send({
         status: "error",
         message: "No existe usuario o imagen"
       });
-    };
+    }
 
-    // Devolver la URL de la imagen desde Cloudinary
+    // Redirigir a la URL de la imagen en Cloudinary
     return res.redirect(user.image);
   } catch (error) {
     console.log("Error al mostrar el archivo del avatar", error);
     return res.status(500).send({
       status: "error",
       message: "Error al mostrar el archivo del avatar"
+    });
+  };
+};
+
+// Metodo para mostrar contador de seguidores y publicaciones
+export const counters = async (req, res) => {
+  try {
+    // Obtener el Id del usuario autenticado (token)
+    let userId = req.user.userId;
+
+    // Si llega el id a través de los parámetros en la URL tiene prioridad
+    if(req.params.id){
+      userId = req.params.id;
+    }
+
+    // Obtener el nombre y apellido del usuario
+    const user = await User.findById(userId, { name: 1, last_name: 1});
+
+    // Vericar el user
+    if(!user){
+      return res.status(404).send({
+        status: "error",
+        message: "Usuario no encontrado"
+      });
+    };
+
+    // Contador de usuarios que yo sigo (o que sigue el usuario autenticado)
+    const followingCount = await Follow.countDocuments({ "following_user": userId });
+
+    // Contador de usuarios que me siguen a mi (que siguen al usuario autenticado)
+    const followedCount = await Follow.countDocuments({ "followed_user": userId });
+
+    // Contador de publicaciones del usuario autenticado
+    const publicationsCount = await Publication.countDocuments({ "user_id": userId });
+
+    // Devolver los contadores
+    return res.status(200).json({
+      status: "success",
+      userId,
+      name: user.name,
+      last_name: user.last_name,
+      followingCount: followingCount,
+      followedCount: followedCount,
+      publicationsCount: publicationsCount
+    });
+  } catch (error) {
+    console.log("Error en los contadores", error)
+    return res.status(500).send({
+      status: "error",
+      message: "Error en los contadores"
     });
   };
 };

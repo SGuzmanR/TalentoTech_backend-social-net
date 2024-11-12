@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { savePublication, showPublication, testPublication, deletePublication, publicationsUser, uploadMedia, showMedia, feed } from "../controllers/publication.js";
+import { savePublication, showPublication, deletePublication, publicationsUser, uploadMedia, showMedia, feed } from "../controllers/publication.js";
 import { ensureAuth } from "../middleware/auth.js";
 import multer from "multer";
 import { CloudinaryStorage } from "multer-storage-cloudinary";
@@ -25,7 +25,6 @@ const uploads = multer({
 const router = Router();
 
 // Definir rutas de publication
-router.get("/test-publication", ensureAuth, testPublication);
 router.get("/show-publication/:id", ensureAuth, showPublication);
 router.get('/media/:id', showMedia);
 router.get('/feed/:page?', ensureAuth, feed);
