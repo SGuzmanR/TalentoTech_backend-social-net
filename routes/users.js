@@ -26,7 +26,7 @@ const router = Router();
 router.get('/profile/:id', ensureAuth, profile);
 router.get('/list/:page?', ensureAuth, listUsers);
 router.get('/avatar/:id', avatar);
-router.get('/counters/:id?', ensureAuth, counterss);
+router.get('/counters/:id?', ensureAuth, counters);
 router.post('/register', register);
 router.post('/login', login);
 router.post('/upload-avatar', ensureAuth, uploads.single("file0"), uploadAvatar);
