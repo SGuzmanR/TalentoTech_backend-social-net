@@ -1,54 +1,61 @@
 import Publication from '../models/publications.js';
 import { followUserIds } from '../services/followServices.js';
 
-// Metodo para hacer (guardar en la BD) una publicacion
+// Método de prueba del controlador publication
+export const testPublication = (req, res) => {
+  return res.status(200).send({
+    message: "Mensaje enviado desde el controlador de Publication"
+  });
+};
+
+// Método para hacer (guardar en la BD) una publicación
 export const savePublication = async (req, res) => {
   try {
     // Obtenemos los datos del body
     const params = req.body;
 
-    // Verificar que llegue desde el body el parametro text con su informacion
-    if (!params.text) {
+    // Verificar que llegue desde el body el parámetro text con su información
+    if(!params.text){
       return res.status(400).send({
         status: "error",
-        message: "Debes enviar el texto de la publicacion"
+        message: "Debes enviar el texto de la publicación"
       });
-    };
+    }
 
     // Crear el objeto del modelo
     let newPublication = new Publication(params);
 
-    // Agregar al objeto de la publicacion la informacion del usuario autenticado quien crea la publicacion
+    // Agregar al objeto de la publicación la información del usuario autenticado quien crea la publicación
     newPublication.user_id = req.user.userId;
 
-    // Guardar la nueva publicacion en la BD
+    // Guardar la nueva publicación en la BD
     const publicationStored = await newPublication.save();
-    
-    // Verificar que se guardo la nueva publicacion en la BD
-    if (!publicationStored) {
+
+    // Verificar que se guardó la nueva publicación en la BD (si existe publicationStored)
+    if(!publicationStored){
       return res.status(500).send({
         status: "error",
-        message: "No se ha guardado la publicacion"
+        message: "No se ha guardado la publicación"
       });
-    };
+    }
 
     // Devolver respuesta exitosa
     return res.status(200).json({
       status: "success",
-      message: "Publicacion creada con exito",
+      message: "¡Publicación creada con éxito!",
       publicationStored
     });
 
   } catch (error) {
-    console.log(`Error al crear la publicacion ${error}`);
+    console.log(`Error al crear la publicación: ${ error }`);
     return res.status(500).send({
       status: "error",
-      message: "Error al crear la publicacion"
+      message: "Error al crear la publicación"
     });
   }
 };
 
-// Metodo para mostrar la publicacion
+// Método para mostrar la publicación
 export const showPublication = async (req, res) => {
   try {
     // Obtener el ID de la publicación desde la url (parámetros)
@@ -63,7 +70,7 @@ export const showPublication = async (req, res) => {
         status: "error",
         message: "No existe la publicación"
       });
-    };
+    }
 
     // Devolvemos respuesta exitosa
     return res.status(200).json({
@@ -71,16 +78,17 @@ export const showPublication = async (req, res) => {
       message: "Publicación encontrada",
       publication: publicationStored
     });
+
   } catch (error) {
     console.log(`Error al mostrar la publicación: ${ error }`);
     return res.status(500).send({
       status: "error",
       message: "Error al mostrar la publicación"
     });
-  };
+  }
 };
 
-// Metodo para eliminar publicacion
+// Método para eliminar una publicación
 export const deletePublication = async (req, res) => {
   try {
     // Obtener el ID de la publicación desde la url (parámetros)
@@ -103,16 +111,17 @@ export const deletePublication = async (req, res) => {
       message: "Publicación eliminada con éxito",
       publication: publicationDeleted
     });
+
   } catch (error) {
     console.log(`Error al eliminar la publicación: ${ error }`);
     return res.status(500).send({
       status: "error",
       message: "Error al eliminar la publicación"
     });
-  };
+  }
 };
 
-// Metodo para listar publicaciones de un usuario en particular, enviandole el ID del usuario en los parametros de la URL de la peticion (endpoint)
+// Método para listar publicaciones de un usuario en particular, enviándole el id del usuario en los parámetros de la URL de la petición (endpoint)
 export const publicationsUser = async (req, res) => {
   try {
     // Obtener el ID del usuario
@@ -157,16 +166,17 @@ export const publicationsUser = async (req, res) => {
       page: publications.page,
       limit_items_ppage: publications.limit
     });
+
   } catch (error) {
     console.log(`Error al mostrar las publicaciones: ${ error }`);
     return res.status(500).send({
       status: "error",
       message: "Error al mostrar las publicaciones"
     });
-  };
+  }
 };
 
-// Metodo para subir imagenes a las publicaciones
+// Método para subir imágenes a las publicaciones
 export const uploadMedia = async (req, res) => {
   try {
     // Obtener el ID de la publicación
@@ -180,7 +190,7 @@ export const uploadMedia = async (req, res) => {
         status: "error",
         message: "No existe la publicación"
       });
-    };
+    }
 
     // Verificar si se ha recibido en la petición un archivo
     if(!req.file){
@@ -188,7 +198,7 @@ export const uploadMedia = async (req, res) => {
         status: "error",
         message: "La petición no incluye la imagen"
       });
-    };
+    }
 
     // Obtener la URL de Cloudinary
     const mediaUrl = req.file.path;
@@ -205,7 +215,7 @@ export const uploadMedia = async (req, res) => {
         status: "error",
         message: "Error en la subida de la imagen"
       });
-    };
+    }
 
     // Devolver respuesta exitosa
     return res.status(200).json({
@@ -214,16 +224,17 @@ export const uploadMedia = async (req, res) => {
       publication: publicationUpdated,
       file: mediaUrl
     });
+
   } catch (error) {
     console.log(`Error al mostrar las publicaciones: ${ error }`);
     return res.status(500).send({
       status: "error",
       message: "Error al mostrar las publicaciones"
     });
-  };
+  }
 };
 
-// Metodo para mostrar el archivo subido a la publicacion
+// Método para mostrar el archivo subido a la publicación
 export const showMedia = async (req, res) => {
   try {
     // Obtener el id de la publicación
@@ -238,20 +249,21 @@ export const showMedia = async (req, res) => {
         status: "error",
         message: "No existe el archivo para esta publicación"
       });
-    };
+    }
 
     // Redirigir a la URL de la imagen en Cloudinary
     return res.redirect(publication.file);
+
   } catch (error) {
     console.error("Error al mostrar el archivo de la publicación", error);
     return res.status(500).send({
       status: "error",
       message: "Error al mostrar archivo en la publicación"
     });
-  };
-};
+  }
+}
 
-// Metodo para listar todas las publicaciones de los usuarios que yo sigo (Feed)
+// Método para listar todas las publicaciones de los usuarios que yo sigo (Feed)
 export const feed = async (req, res) => {
   try {
     // Asignar el número de página
@@ -266,7 +278,7 @@ export const feed = async (req, res) => {
         status: "error",
         message: "Usuario no autenticado"
       });
-    };
+    }
 
     // Obtener un array de IDs de los usuarios que sigue el usuario autenticado
     const myFollows = await followUserIds(req);
@@ -277,7 +289,7 @@ export const feed = async (req, res) => {
         status: "error",
         message: "No sigues a ningún usuario, no hay publicaciones que mostrar"
       });
-    };
+    }
 
     // Configurar las options de la consulta
     const options = {
@@ -303,7 +315,7 @@ export const feed = async (req, res) => {
         status: "error",
         message: "No hay publicaciones para mostrar"
       });
-    };
+    }
 
     // Devolver respuesta exitosa
     return res.status(200).json({
@@ -315,10 +327,11 @@ export const feed = async (req, res) => {
       page: result.page,
       limit: result.limit
     });
+
   } catch (error) {
     return res.status(500).send({
       status: "error",
       message: "Error al mostrar las publicaciones en el feed"
     });
-  };
-};
+  }
+}
